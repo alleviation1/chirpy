@@ -9,7 +9,12 @@ import (
 func (c *apiConfig) metrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	adminIndex := fmt.Sprintf("<html><body><h1>Welcome, Chirpy Admin</h1><p>Chirpy has been visited %s times!</p></body></html>", strconv.Itoa(int(c.fileserverHits.Load())))
+	adminIndex := fmt.Sprintf(`<html>
+	<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %s times!</p>
+	</body>
+</html>`, strconv.Itoa(int(c.fileserverHits.Load())))
 	w.Write([]byte(adminIndex))
 }
 

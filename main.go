@@ -19,6 +19,7 @@ func main() {
 	serverMux.Handle("/app/", config.incFileHitsMiddleware(http.StripPrefix("/app/", http.FileServer(http.Dir(fileRoot)))))
 
 	serverMux.HandleFunc("GET /api/healthz", healthz)
+	serverMux.HandleFunc("POST /api/validate_chirp", validate_chirp_handler)
 
 	serverMux.HandleFunc("GET /admin/metrics", config.metrics)
 	serverMux.HandleFunc("POST /admin/reset", config.reset)
