@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"encoding/json"
+	"strings"
 )
 
 func validate_chirp_handler(w http.ResponseWriter, r *http.Request) {
@@ -13,7 +14,8 @@ func validate_chirp_handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type responseBody struct{
-		Valid bool	 `json:"valid"`
+		Valid bool	 		`json:"valid"`
+		Cleaned_Body string	`json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -28,10 +30,17 @@ func validate_chirp_handler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 400, "Chirp is too long")
 		return
 	}
+
+	filteredResp, err := filterBadWords(req.Body)
+	if err != nil {
+		respondWithError(w, 400, "Unable to censor chirp")
+		return
+	}
 	
 
 	resp := responseBody{
 		Valid: true,
+		Cleaned_Body: filteredResp,
 	}
 	respondWithValidJson(w, 200, resp)
 }
@@ -50,4 +59,18 @@ func respondWithValidJson(w http.ResponseWriter, code int, payload interface{}) 
 
 func respondWithError(w http.ResponseWriter, code int, msg string) error {
 	return respondWithValidJson(w, code, map[string]string{"error": "Something went wrong"})
+}
+
+func filterBadWords(payload string) (string, error) {
+	badWords := []string{"kerfuffle", "sharbert", "fornax"}
+	words := strings.Split(payload, " ")
+	for _, badWord := range badWords {
+		for j, word := range words {
+			if strings.ToLower(word) == badWord {
+				words[j] = "****"
+			}
+		}
+	}
+
+	return strings.Join(words, " "), nil
 }
