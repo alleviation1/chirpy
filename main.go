@@ -4,16 +4,40 @@ import (
 	"net/http"
 	"log"
 	"sync/atomic"
+	"os"
+	"database/sql"
+
+	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
+	"github.com/alleviation1/chirpy/internal/database"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	dbQueries *database.Queries
 }
 
 func main() {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
+	}
+
 	const port = ":8080"
 	const fileRoot = "."
-	config := apiConfig{fileserverHits: atomic.Int32{}}
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error creating postgres connection: %w", err)
+	}
+	
+	defer db.Close()
+
+	config := apiConfig{
+		fileserverHits: atomic.Int32{},
+		dbQueries: database.New(db),
+	}
 
 	serverMux := http.NewServeMux()
 	serverMux.Handle("/app/", config.incFileHitsMiddleware(http.StripPrefix("/app/", http.FileServer(http.Dir(fileRoot)))))
@@ -30,6 +54,4 @@ func main() {
 	}
 
 	log.Fatal(server.ListenAndServe())
-
-	defer server.Close()
 }
