@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"fmt"
 	"strconv"
+	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func (c *apiConfig) metrics(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +22,21 @@ func (c *apiConfig) metrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *apiConfig) reset(w http.ResponseWriter, r *http.Request) {
+	godotenv.Load()
+	auth := os.Getenv("PLATFORM")
+	if auth != "dev" {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Reset is only allowed in dev environment."))
+		return
+	}
+
+	err := c.db.DeleteUsers(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to reset the database: " + err.Error()))
+		return
+	}
+
 	c.fileserverHits.Store(0)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
