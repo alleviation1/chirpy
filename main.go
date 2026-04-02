@@ -44,6 +44,7 @@ func main() {
 
 	serverMux.HandleFunc("GET /api/healthz", healthz)
 	serverMux.HandleFunc("POST /api/users", config.createUserHandler)
+	serverMux.HandleFunc("POST /api/login", config.loginHandler)
 	serverMux.HandleFunc("POST /api/chirps", config.createChirpHandler)
 	serverMux.HandleFunc("GET /api/chirps", config.getChirpsHandler)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}", config.getChirpByIDHandler)
