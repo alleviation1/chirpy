@@ -7,6 +7,9 @@ package database
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -61,6 +64,40 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+	)
+	return i, err
+}
+
+const setEmailAndPassword = `-- name: SetEmailAndPassword :one
+UPDATE users
+SET email = $1,
+hashed_password = $2,
+updated_at = now()
+WHERE id = $3
+RETURNING users.id, users.created_at, users.updated_at, users.email
+`
+
+type SetEmailAndPasswordParams struct {
+	Email          string
+	HashedPassword string
+	ID             uuid.UUID
+}
+
+type SetEmailAndPasswordRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Email     string
+}
+
+func (q *Queries) SetEmailAndPassword(ctx context.Context, arg SetEmailAndPasswordParams) (SetEmailAndPasswordRow, error) {
+	row := q.db.QueryRowContext(ctx, setEmailAndPassword, arg.Email, arg.HashedPassword, arg.ID)
+	var i SetEmailAndPasswordRow
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
 	)
 	return i, err
 }
