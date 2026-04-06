@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alleviation1/chirpy/internal/auth"
+	"github.com/alleviation1/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -17,11 +18,17 @@ func (c *apiConfig) loginHandler (w http.ResponseWriter, r *http.Request) {
 		Password  string `json:"password"`
 	}
 
-	type responseBody struct {
+	type User struct {
 		ID 		  uuid.UUID `json:"id"`
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
 		Email 	  string `json:"email"`
+	}
+
+	type responseBody struct {
+		User
+		Token 	  string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	req := requestBody{}
@@ -54,10 +61,29 @@ func (c *apiConfig) loginHandler (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	accessToken, err := auth.MakeJWT(user.ID, c.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to make jwt in login")
+		return
+	}
+
+	refreshToken, err := c.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token: auth.MakeRefreshToken(),
+		UserID: user.ID,
+	})
+	if err != nil {
+		respondWithError(w, 500, "Unable to create refresh token")
+		return
+	}
+
 	respondWithValidJson(w, 200, responseBody{
-		ID: user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email: user.Email,
+		User: User{
+			ID: user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email: user.Email,
+		},
+		Token: accessToken,
+		RefreshToken: refreshToken.Token,
 	})
 }

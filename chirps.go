@@ -4,8 +4,11 @@ import (
 	"net/http"
 	"encoding/json"
 	"time"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/alleviation1/chirpy/internal/database"
+	"github.com/alleviation1/chirpy/internal/auth"
 )
 
 type Chirp struct{
@@ -22,6 +25,7 @@ func (c *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 	type requestBody struct{
 		Body 	    string	  `json:"body"`
 		UserID      uuid.UUID `json:"user_id"`
+		Token		string    `json:"token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -29,6 +33,19 @@ func (c *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&req)
 	if err != nil {
 		respondWithError(w, 500, "Unable to decode JSON in chirp handler")
+		return
+	}
+
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 500, "Unable to get bearer token in create chirp")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, c.jwtSecret)
+	if err != nil {
+		fmt.Printf("Error :%w\n", err)
+		respondWithError(w, 401, "Unable to validate JWT in create chirp")
 		return
 	}
 
@@ -45,7 +62,7 @@ func (c *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 	
 	chirp, err := c.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body: filteredBody,
-		UserID: req.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithError(w, 500, "Unable to create chirp")
@@ -58,7 +75,7 @@ func (c *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
 		Body: chirp.Body,
-		UserID: chirp.UserID,
+		UserID: userID,
 	})
 }
 

@@ -19,7 +19,7 @@ func respondWithValidJson(w http.ResponseWriter, code int, payload interface{}) 
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) error {
-	return respondWithValidJson(w, code, map[string]string{"error": "Something went wrong"})
+	return respondWithValidJson(w, code, map[string]string{"error": msg})
 }
 
 func filterBadWords(payload string) (string, error) {

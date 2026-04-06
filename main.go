@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db *database.Queries
+	jwtSecret string
 }
 
 func main() {
@@ -24,12 +25,17 @@ func main() {
 		log.Fatal("DB_URL must be set")
 	}
 
+	jwtKey := os.Getenv("DB_URL")
+	if jwtKey == "" {
+		log.Fatal("JWT key must be set")
+	}
+
 	const port = ":8080"
 	const fileRoot = "."
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatalf("Error creating postgres connection: %w", err)
+		log.Fatal(err)
 	}
 	
 	defer db.Close()
@@ -37,6 +43,7 @@ func main() {
 	config := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db: database.New(db),
+		jwtSecret: jwtKey,
 	}
 
 	serverMux := http.NewServeMux()
@@ -44,6 +51,8 @@ func main() {
 
 	serverMux.HandleFunc("GET /api/healthz", healthz)
 	serverMux.HandleFunc("POST /api/users", config.createUserHandler)
+	serverMux.HandleFunc("POST /api/refresh", config.refreshTokenHandler)
+	serverMux.HandleFunc("POST /api/revoke", config.revokeTokenHandler)
 	serverMux.HandleFunc("POST /api/login", config.loginHandler)
 	serverMux.HandleFunc("POST /api/chirps", config.createChirpHandler)
 	serverMux.HandleFunc("GET /api/chirps", config.getChirpsHandler)
