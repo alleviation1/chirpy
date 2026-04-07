@@ -12,7 +12,6 @@ import (
 )
 
 func (c *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
-	// get req body
 	defer r.Body.Close()
 
 	type requestBody struct {
@@ -24,7 +23,8 @@ func (c *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		ID 		  uuid.UUID `json:"id"`
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
-		Email 	  string `json:"email"`
+		Email 	  string    `json:"email"`
+		IsChirpyRed	bool	`json:"is_chirpy_red"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -55,6 +55,7 @@ func (c *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email: user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}
 
 	respondWithValidJson(w, 201, resp)
@@ -72,6 +73,7 @@ func (c *apiConfig) updateUserHandler (w http.ResponseWriter, r *http.Request) {
 		Email		string       `json:"email"`
 		CreatedAt	time.Time    `json:"created_at"`
 		UpdatedAt	time.Time    `json:"updated_at"`
+		IsChirpyRed	bool		 `json:"is_chirpy_red"`
 	}
 
 	tokenString, err := auth.GetBearerToken(r.Header)
@@ -113,5 +115,6 @@ func (c *apiConfig) updateUserHandler (w http.ResponseWriter, r *http.Request) {
 		Email: updatedUser.Email,
 		CreatedAt: updatedUser.CreatedAt,
 		UpdatedAt: updatedUser.UpdatedAt,
+		IsChirpyRed: updatedUser.IsChirpyRed,
 	})
 }

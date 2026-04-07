@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db *database.Queries
 	jwtSecret string
+	polkaAPIKey string
 }
 
 func main() {
@@ -28,6 +29,11 @@ func main() {
 	jwtKey := os.Getenv("DB_URL")
 	if jwtKey == "" {
 		log.Fatal("JWT key must be set")
+	}
+
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("Polka key must be set")
 	}
 
 	const port = ":8080"
@@ -44,6 +50,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db: database.New(db),
 		jwtSecret: jwtKey,
+		polkaAPIKey: polkaKey,
 	}
 
 	serverMux := http.NewServeMux()
@@ -58,6 +65,8 @@ func main() {
 	serverMux.HandleFunc("POST /api/chirps", config.createChirpHandler)
 	serverMux.HandleFunc("GET /api/chirps", config.getChirpsHandler)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}", config.getChirpByIDHandler)
+	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}", config.deleteChirpByIDHandler)
+	serverMux.HandleFunc("POST /api/polka/webhooks", config.upgradeUserHandler)
 
 	serverMux.HandleFunc("GET /admin/metrics", config.metrics)
 	serverMux.HandleFunc("POST /admin/reset", config.reset)

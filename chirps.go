@@ -111,7 +111,7 @@ func (c *apiConfig) getChirpByIDHandler(w http.ResponseWriter, r *http.Request) 
 
 	chirpID := r.PathValue("chirpID")
 	if chirpID == "" {
-		respondWithError(w, http.StatusInternalServerError, "Chirp ID was not passed correctly")
+		respondWithError(w, http.StatusInternalServerError, "Chirp ID was not passed correctly in get chirp by id")
 		return
 	}
 
@@ -134,4 +134,53 @@ func (c *apiConfig) getChirpByIDHandler(w http.ResponseWriter, r *http.Request) 
 		Body: chirp.Body,
 		UserID: chirp.UserID,
 	})
+}
+
+func (c *apiConfig) deleteChirpByIDHandler(w http.ResponseWriter, r * http.Request) {
+	chirpID := r.PathValue("chirpID")
+	if chirpID == "" {
+		respondWithError(w, http.StatusInternalServerError, "Chirp ID was not passed correctly in delete chirp")
+		return
+	}
+
+	id, err := uuid.Parse(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to parse chirp id into uuid in delete chirp")
+		return
+	}
+
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Unable to get auth token in delete chirp handler")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, c.jwtSecret)
+	if err != nil {
+		respondWithError(w, 403, "Invalid token in delete chirp handler")
+		return
+	}
+
+	chirp, err := c.db.GetChirp(r.Context(), id)
+	if err != nil {
+		respondWithError(w, 500, "Unable to get chirp by id in delete chirp")
+	}
+
+	if userID != chirp.UserID {
+		respondWithError(w, 403, "Chirp user is not authorized to delete chirp")
+		return
+	}
+
+	deletedChirp, err := c.db.DeleteChirpByID(r.Context(), chirp.ID)
+	if err != nil {
+		respondWithError(w, 500, "Unable to delete chirp in delete chirp handler")
+		return
+	}
+
+	if deletedChirp.ID == nil {
+		respondWithError(w, 404, "Unable to find and delete chirp in delete chirp handler")
+		return
+	}
+
+	w.WriteHeader(204)
 }
